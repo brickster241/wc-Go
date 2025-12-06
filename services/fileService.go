@@ -18,20 +18,20 @@ type WCResult struct {
 }
 
 // ProcessFilesConcurrent processes multiple files concurrently and returns their word count results.
-func ProcessFilesConcurrent(cfg wcCLI) ([]WCResult, error) {
+func ProcessFilesConcurrent(cfg WcCLI) ([]WCResult, error) {
 
 	// IF no files, process STDIN directly (synchronously)
-	if len(cfg.files) == 0 {
+	if len(cfg.Files) == 0 {
 		r := processReader("stdin", os.Stdin, cfg)
 		return []WCResult{r}, nil
 	}
 
-	results := make([]WCResult, len(cfg.files))
-	errCh := make(chan error, len(cfg.files))
+	results := make([]WCResult, len(cfg.Files))
+	errCh := make(chan error, len(cfg.Files))
 	doneCh := make(chan struct{})
 
 	// Process each file in a separate goroutine
-	for i, fname := range cfg.files {
+	for i, fname := range cfg.Files {
 		go func(i int, fname string) {
 			f, err := os.Open(fname)
 			if err != nil {
@@ -47,7 +47,7 @@ func ProcessFilesConcurrent(cfg wcCLI) ([]WCResult, error) {
 
 	// Wait for all goroutines to finish or the first error
 	go func() {
-		for range cfg.files {
+		for range cfg.Files {
 			if err := <-errCh; err != nil {
 				// Send final error and stop
 				doneCh <- struct{}{}
@@ -71,7 +71,7 @@ func ProcessFilesConcurrent(cfg wcCLI) ([]WCResult, error) {
 }
 
 // processReader processes a single file reader and returns the WCResult.
-func processReader(fileName string, reader io.Reader, cfg wcCLI) WCResult {
+func processReader(fileName string, reader io.Reader, cfg WcCLI) WCResult {
 
 	result := WCResult{FileName: fileName}
 
@@ -81,33 +81,35 @@ func processReader(fileName string, reader io.Reader, cfg wcCLI) WCResult {
 	// Read chunks, not LINES (because this will support huge lines too)
 	buf := make([]byte, 32*1024) // 32KB buffer
 
+	// Track if we are in a word for word counting
+	inWord := false
+
 	for {
 		n, err := byteReader.Read(buf)
 		if n > 0 {
+			// Convert bytes to string (UTF-8 safe)
 			chunk := buf[:n]
+			s := string(chunk)
 
 			// Byte count
-			if cfg.bytes {
+			if cfg.Bytes {
 				result.Bytes += n
 			}
-			if cfg.chars || cfg.words || cfg.lines {
-				// Convert bytes to string (UTF-8 safe)
-				s := string(chunk)
 
-				// Line count
-				if cfg.lines {
-					result.Lines += countLines(s)
-				}
+			// Line count
+			if cfg.Lines {
+				result.Lines += countLines(s)
+			}
 
-				// Word count
-				if cfg.words {
-					result.Words += countWords(s)
-				}
+			// Word count
+			if cfg.Words {
+				words := countWords(s, &inWord)
+				result.Words += words
+			}
 
-				// Character count
-				if cfg.chars {
-					result.Chars += countRunes(s) // UTF-8 aware character count
-				}
+			// Character count
+			if cfg.Chars {
+				result.Chars += countRunes(s) // UTF-8 aware character count
 			}
 		}
 		if err == io.EOF {
@@ -134,18 +136,18 @@ func countLines(s string) int {
 }
 
 // countWords counts the number of words in a string.
-func countWords(s string) int {
-	inWord := false
+func countWords(s string, inWord *bool) int {
 	count := 0
 
+	// A word is defined as a sequence of non-space characters
 	for _, r := range s {
 		if unicode.IsSpace(r) {
-			inWord = false
+			*inWord = false
 		} else {
-			if !inWord {
+			if !*inWord {
 				count++
 			}
-			inWord = true
+			*inWord = true
 		}
 	}
 	return count

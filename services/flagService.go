@@ -5,16 +5,16 @@ import (
 )
 
 // wcCLI struct to hold the state of command-line flags and file names
-type wcCLI struct {
-	words bool     // -w flag (word count)
-	lines bool     // -l flag (line count)
-	bytes bool     // -c flag (byte count)
-	chars bool     // -m flag (character count)
-	files []string // List of input files
+type WcCLI struct {
+	Words bool     // -w flag (word count)
+	Lines bool     // -l flag (line count)
+	Bytes bool     // -c flag (byte count)
+	Chars bool     // -m flag (character count)
+	Files []string // List of input files
 }
 
 // GetCLIFlags parses command-line flags and returns a wcCLI struct
-func GetCLIFlags() wcCLI {
+func GetCLIFlags() WcCLI {
 
 	// Define command-line flags
 	words := flag.Bool("w", false, "The number of words in each input file is written to the standard output.")
@@ -27,11 +27,11 @@ func GetCLIFlags() wcCLI {
 	files := flag.Args() // Remaining arguments are treated as input files
 
 	// Initialize wcCLI struct based on parsed flags
-	return wcCLI{
-		words: *words,
-		lines: *lines,
-		bytes: *bytes,
-		chars: *chars,
-		files: files,
+	return WcCLI{
+		Words: *words,
+		Lines: *lines,
+		Bytes: *bytes,
+		Chars: *chars,
+		Files: files,
 	}
 }
