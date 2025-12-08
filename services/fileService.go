@@ -79,7 +79,7 @@ func processReader(fileName string, reader io.Reader, cfg WcCLI) WCResult {
 	byteReader := bufio.NewReader(reader)
 
 	// Read chunks, not LINES (because this will support huge lines too)
-	buf := make([]byte, 32*1024) // 32KB buffer
+	buf := make([]byte, 128*1024) // 128KB buffer
 
 	// Track if we are in a word for word counting
 	inWord := false
@@ -109,7 +109,7 @@ func processReader(fileName string, reader io.Reader, cfg WcCLI) WCResult {
 
 			// Character count
 			if cfg.Chars {
-				result.Chars += countRunes(s) // UTF-8 aware character count
+				result.Chars += countChars(s) // UTF-8 aware character count
 			}
 		}
 		if err == io.EOF {
@@ -153,7 +153,7 @@ func countWords(s string, inWord *bool) int {
 	return count
 }
 
-// countRunes counts the number of runes (characters) in a string.
-func countRunes(s string) int {
+// countChars counts the number of characters in a string.
+func countChars(s string) int {
 	return utf8.RuneCountInString(s)
 }
