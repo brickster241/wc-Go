@@ -158,3 +158,41 @@ func TestWCComparison(t *testing.T) {
 		}
 	}
 }
+
+// TestWCMultipleFileComparison compares the output of the standard wc command with the custom wcGo implementation with multiple files at once, compares the total too.
+func TestWCMultipleFilesComparison(t *testing.T) {
+	wcGo := filepath.FromSlash("../wcGo") // Path to the wcGo binary
+
+	files := []string{}
+	for _, file := range testFiles {
+		path := filepath.Join("..", "testdata", file) // Path to the test files
+		files = append(files, path)
+	}
+
+	// Iterate over each combination of flags
+	for _, fl := range flags {
+		t.Run("Multiple_Files"+" "+strings.Join(fl, " "), func(t *testing.T) {
+
+			// run wc
+			wcArgs := append(fl, files...)
+			want, err := exec.Command("wc", wcArgs...).CombinedOutput()
+
+			if err != nil {
+				t.Fatalf("wc command failed for Multiple File test with flags %v: %v", fl, err)
+			}
+
+			// run wcGo
+			wcGoArgs := append(fl, files...)
+			got, err := exec.Command(wcGo, wcGoArgs...).CombinedOutput()
+
+			if err != nil {
+				t.Fatalf("wcGo command failed for Multiple File test with flags %v: %v", fl, err)
+			}
+
+			// Compare outputs
+			if !bytes.Equal(want, got) {
+				t.Fatalf("\nMismatch!\nwc:    %q\nwcGo:  %q", want, got)
+			}
+		})
+	}
+}
