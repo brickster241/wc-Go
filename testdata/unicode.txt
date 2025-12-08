@@ -1,0 +1,20 @@
+Unicode test file 😊🚀🔥
+
+Accented characters:
+Café naïve jalapeño résumé coöperate.
+
+JK text:
+こんにちは世界
+안녕하세요 세계
+
+Right-to-left (RTL) text:
+שלום עולם
+مرحبا بالعالم
+
+Combining characters:
+Á å ö é ê ẽ
+
+Mixed emojis:
+👍🏽❤️‍🔥🤯🐍🌍
+
+End of unicode test.

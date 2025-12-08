@@ -1,0 +1,14 @@
+First line.
+
+Second line after an empty line.
+      (This line has only spaces before the parentheses.)
+
+Line with tabs:
+	One tab
+		Two tabs
+
+Lorem ipsum dolor sit amet,
+consectetur adipiscing elit,
+sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+
+Last line with no newline at the end.

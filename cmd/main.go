@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/brickster241/wc-Go/services"
 )
@@ -30,7 +29,7 @@ func printResults(cfg services.WcCLI, results []services.WCResult) {
 
 		// Print filename unless reading from stdin
 		if res.FileName != "stdin" {
-			fmt.Printf(" %s\n", filepath.Base(res.FileName))
+			fmt.Printf(" %s\n", res.FileName)
 		} else {
 			fmt.Printf("\n")
 		}
