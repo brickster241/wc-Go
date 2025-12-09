@@ -79,10 +79,13 @@ func processReader(fileName string, reader io.Reader, cfg WcCLI) WCResult {
 	byteReader := bufio.NewReader(reader)
 
 	// Read chunks, not LINES (because this will support huge lines too)
-	buf := make([]byte, 128*1024) // 128KB buffer
+	buf := make([]byte, 32*1024) // 32KB buffer
 
 	// Track if we are in a word for word counting
 	inWord := false
+
+	// Carry over bytes for incomplete UTF-8 characters
+	var carry []byte
 
 	for {
 		n, err := byteReader.Read(buf)
@@ -109,7 +112,9 @@ func processReader(fileName string, reader io.Reader, cfg WcCLI) WCResult {
 
 			// Character count
 			if cfg.Chars {
-				result.Chars += countChars(s) // UTF-8 aware character count
+				runeCount, leftover := decodeAndCountRunes(chunk, carry)
+				result.Chars += runeCount
+				carry = leftover
 			}
 		}
 		if err == io.EOF {
@@ -153,7 +158,23 @@ func countWords(s string, inWord *bool) int {
 	return count
 }
 
-// countChars counts the number of characters in a string.
-func countChars(s string) int {
-	return utf8.RuneCountInString(s)
+// decodeAndCountRunes decodes UTF-8 runes from a byte slice and counts them, handling incomplete runes.
+func decodeAndCountRunes(chunk []byte, carry []byte) (runes int, newCarry []byte) {
+	// Prepend carry to the chunk
+	buf := append(carry, chunk...)
+
+	i := 0
+	for i < len(buf) {
+		r, size := utf8.DecodeRune(buf[i:])
+		if r == utf8.RuneError && size == 1 {
+			// Incomplete rune at the end -> save it for the next chunk
+			break
+		}
+
+		runes++
+		i += size
+
+	}
+	newCarry = append([]byte{}, buf[i:]...) // Save incomplete bytes
+	return runes, newCarry
 }

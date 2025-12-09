@@ -27,6 +27,8 @@ var flags = [][]string{
 	{"-w"}, // words only
 	{"-c"}, // bytes only
 	{"-m"}, // characters only
+	{"-l", "-w", "-c"},
+	{"-l", "-w", "-m"},
 }
 
 // randomLine generates a random line with a mix of letters, digits, punctuation, and emojis
@@ -66,61 +68,6 @@ func randByte() byte {
 	b := make([]byte, 1)
 	rand.Read(b)
 	return b[0]
-}
-
-// TestLargeRandomFile generates a large random file and tests the wcGo implementation against the standard wc command.
-func TestLargeRandomFile(t *testing.T) {
-	wcGo := filepath.FromSlash("../wcGo") // Path to the wcGo binary
-
-	// Create a large random file
-	tempDir := t.TempDir()
-	testFile := filepath.Join(tempDir, "large_random.txt")
-
-	t.Log("Generating large test file....")
-	f, err := os.Create(testFile)
-	if err != nil {
-		t.Fatalf("Failed to create test file: %v", err)
-	}
-
-	// Write random lines until we reach ~100 MB
-	size := int64(0)
-	target := int64(100 * 1024 * 1024) // 100 MB
-	for size < target {
-		line := randomLine()
-		n, _ := f.WriteString(line)
-		size += int64(n)
-	}
-
-	// Close the file to flush writes
-	f.Close()
-
-	t.Logf("Generated test file of size %d MB.", size/1024/1024)
-	// Iterate over each combination of flags
-	for _, fl := range flags {
-		t.Run(testFile+" "+strings.Join(fl, " "), func(t *testing.T) {
-
-			// run wc
-			wcArgs := append(fl, testFile)
-			want, err := exec.Command("wc", wcArgs...).CombinedOutput()
-
-			if err != nil {
-				t.Fatalf("wc command failed for %s with flags %v: %v", testFile, fl, err)
-			}
-
-			// run wcGo
-			wcGoArgs := append(fl, testFile)
-			got, err := exec.Command(wcGo, wcGoArgs...).CombinedOutput()
-
-			if err != nil {
-				t.Fatalf("wcGo command failed for %s with flags %v: %v", testFile, fl, err)
-			}
-
-			// Compare outputs
-			if !bytes.Equal(want, got) {
-				t.Fatalf("\nMismatch!\nwc:    %q\nwcGo:  %q", want, got)
-			}
-		})
-	}
 }
 
 // TestWCComparison compares the output of the standard wc command with the custom wcGo implementation
@@ -187,6 +134,61 @@ func TestWCMultipleFilesComparison(t *testing.T) {
 
 			if err != nil {
 				t.Fatalf("wcGo command failed for Multiple File test with flags %v: %v", fl, err)
+			}
+
+			// Compare outputs
+			if !bytes.Equal(want, got) {
+				t.Fatalf("\nMismatch!\nwc:    %q\nwcGo:  %q", want, got)
+			}
+		})
+	}
+}
+
+// TestLargeRandomFile generates a large random file and tests the wcGo implementation against the standard wc command.
+func TestLargeRandomFile(t *testing.T) {
+	wcGo := filepath.FromSlash("../wcGo") // Path to the wcGo binary
+
+	// Create a large random file
+	tempDir := t.TempDir()
+	testFile := filepath.Join(tempDir, "large_random.txt")
+
+	t.Log("Generating large test file....")
+	f, err := os.Create(testFile)
+	if err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+
+	// Write random lines until we reach ~100 MB
+	size := int64(0)
+	target := int64(100 * 1024 * 1024) // 100 MB
+	for size < target {
+		line := randomLine()
+		n, _ := f.WriteString(line)
+		size += int64(n)
+	}
+
+	// Close the file to flush writes
+	f.Close()
+
+	t.Logf("Generated test file of size %d MB.", size/1024/1024)
+	// Iterate over each combination of flags
+	for _, fl := range flags {
+		t.Run(testFile+" "+strings.Join(fl, " "), func(t *testing.T) {
+
+			// run wc
+			wcArgs := append(fl, testFile)
+			want, err := exec.Command("wc", wcArgs...).CombinedOutput()
+
+			if err != nil {
+				t.Fatalf("wc command failed for %s with flags %v: %v", testFile, fl, err)
+			}
+
+			// run wcGo
+			wcGoArgs := append(fl, testFile)
+			got, err := exec.Command(wcGo, wcGoArgs...).CombinedOutput()
+
+			if err != nil {
+				t.Fatalf("wcGo command failed for %s with flags %v: %v", testFile, fl, err)
 			}
 
 			// Compare outputs
