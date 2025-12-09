@@ -158,9 +158,9 @@ func TestLargeRandomFile(t *testing.T) {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 
-	// Write random lines until we reach ~100 MB
+	// Write random lines until we reach ~500 MB
 	size := int64(0)
-	target := int64(100 * 1024 * 1024) // 100 MB
+	target := int64(500 * 1024 * 1024) // 500 MB
 	for size < target {
 		line := randomLine()
 		n, _ := f.WriteString(line)
