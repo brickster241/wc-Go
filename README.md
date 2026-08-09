@@ -2,6 +2,12 @@
 
 A high-performance, concurrent implementation of the Unix `wc` utility written in Go. wcGo processes files and streams with goroutines, efficient chunked I/O, and proper UTF-8 handling to deliver fast, accurate word, line, byte, and character counts.
 
+**[▶ Stream Deck — live playground](https://brickster241.github.io/wc-Go/)** — the chunked
+counting algorithm at human speed: shrink the chunk size, cut a multi-byte character on a
+seam, and watch the amber carry hand its head bytes to the next chunk while the counts stay
+exactly right.
+
+![Chunks streaming through the counter; a rune split across the boundary is carried, and chunked equals whole-string](assets/playground.gif)
 
 ## Measured against coreutils — the suite caught a real bug
 
