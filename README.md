@@ -2,6 +2,39 @@
 
 A high-performance, concurrent implementation of the Unix `wc` utility written in Go. wcGo processes files and streams with goroutines, efficient chunked I/O, and proper UTF-8 handling to deliver fast, accurate word, line, byte, and character counts.
 
+
+## Measured against coreutils — the suite caught a real bug
+
+`tests/` is a **59-case differential suite**: every flag combination, run through both
+`wc` and `wcGo`, outputs compared byte-for-byte. It self-builds (`go test ./...`, no
+manual step) and pins `LC_ALL=en_US.UTF-8` — in the POSIX locale the *reference
+implementation itself* silently counts bytes for `-m`, which would make agreement
+meaningless.
+
+Writing this properly caught a real defect: the old rune counter treated an **invalid
+byte mid-stream** as an incomplete sequence and silently dropped the rest of the chunk.
+wc counts each undecodable byte as one character; now wcGo does too, and 59/59 agree.
+
+## Benchmarks (`go run ./wcbench`)
+
+darwin/arm64, 10 cores · 512MB ASCII, 256MB UTF-8-heavy, 100×5MB files · median of 5:
+
+| benchmark | wc | wcGo | speedup |
+|---|---|---|---|
+| lines (-l), ascii | 1451 MB/s | **5604 MB/s** | 3.9× |
+| chars (-m), ascii | 290 MB/s | **2817 MB/s** | 9.7× |
+| chars (-m), utf-8 heavy | 129 MB/s | **434 MB/s** | 3.4× |
+| chars (-m), boundary torture | 90 MB/s | **1143 MB/s** | 12.8× |
+| 100×5MB files, -l -w -c | 756 MB/s | **2621 MB/s** | 3.5× |
+| words (-w), ascii | 664 MB/s | 533 MB/s | 0.8× |
+| bytes (-c), ascii | ~stat | ~stat | parity |
+
+The words row is a loss and stays in the table — BSD wc's word scanner is a very tight
+C loop, and 0.8× after an ASCII fast path is where this implementation honestly stands.
+`-c` alone is O(1) for both: wcGo now takes the same stat-and-stop shortcut coreutils does.
+The torture corpus is 3-byte runes positioned so boundaries land mid-rune across every
+32KB chunk edge — the case the carry logic exists for.
+
 ## Features
 
 - **Streaming Processing**: Processes files in 32KB chunks, enabling memory-efficient handling of arbitrarily large files without loading them entirely into memory

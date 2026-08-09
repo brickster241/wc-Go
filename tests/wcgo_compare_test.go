@@ -81,9 +81,15 @@ func TestWCComparison(t *testing.T) {
 		for _, fl := range flags {
 			t.Run(file+" "+strings.Join(fl, " "), func(t *testing.T) {
 
-				// run wc
+				// run wc — with the locale PINNED. In the POSIX locale
+				// (any non-interactive shell without LC_ALL), wc -m counts
+				// BYTES, silently — the reference implementation itself
+				// changes behavior with the environment. wcGo is always
+				// UTF-8; hold wc to the same standard.
 				wcArgs := append(fl, path)
-				want, err := exec.Command("wc", wcArgs...).CombinedOutput()
+				wcCmd := exec.Command("wc", wcArgs...)
+				wcCmd.Env = append(os.Environ(), "LC_ALL=en_US.UTF-8")
+				want, err := wcCmd.CombinedOutput()
 
 				if err != nil {
 					t.Fatalf("wc command failed for %s with flags %v: %v", file, fl, err)
@@ -120,9 +126,11 @@ func TestWCMultipleFilesComparison(t *testing.T) {
 	for _, fl := range flags {
 		t.Run("Multiple_Files"+" "+strings.Join(fl, " "), func(t *testing.T) {
 
-			// run wc
+			// run wc (locale pinned — see the single-file test for why)
 			wcArgs := append(fl, files...)
-			want, err := exec.Command("wc", wcArgs...).CombinedOutput()
+			wcCmd := exec.Command("wc", wcArgs...)
+			wcCmd.Env = append(os.Environ(), "LC_ALL=en_US.UTF-8")
+			want, err := wcCmd.CombinedOutput()
 
 			if err != nil {
 				t.Fatalf("wc command failed for Multiple File test with flags %v: %v", fl, err)
@@ -175,9 +183,11 @@ func TestLargeRandomFile(t *testing.T) {
 	for _, fl := range flags {
 		t.Run(testFile+" "+strings.Join(fl, " "), func(t *testing.T) {
 
-			// run wc
+			// run wc (locale pinned — see the single-file test for why)
 			wcArgs := append(fl, testFile)
-			want, err := exec.Command("wc", wcArgs...).CombinedOutput()
+			wcCmd := exec.Command("wc", wcArgs...)
+			wcCmd.Env = append(os.Environ(), "LC_ALL=en_US.UTF-8")
+			want, err := wcCmd.CombinedOutput()
 
 			if err != nil {
 				t.Fatalf("wc command failed for %s with flags %v: %v", testFile, fl, err)
