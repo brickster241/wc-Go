@@ -7,73 +7,71 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='none' stroke='%234ade80' stroke-width='3'/%3E%3Ccircle cx='16' cy='16' r='5' fill='%234ade80'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;700;900&family=Azeret+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg:#0b0f14; --panel:#11151d; --panel2:#161c26; --line:#232b38; --grid:#121826;
-    --ink:#e6edf3; --dim:#8b98a9; --faint:#5b6675;
-    --amber:#ffb454; --hud:#7dd3fc; --ok:#4ade80; --err:#f87171; --purple:#c4b5fd;
-    --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
-    --sans:'Chakra Petch',-apple-system,'Segoe UI',system-ui,Helvetica,sans-serif;
+    --white:#ffffff; --off:#f4f4f2; --black:#141414; --gray:#6f6f6c; --hairline:#dcdcd8;
+    --verm:#e33e26; --wheel:#1b1b1b; --wheelface:#f8f7f2;
+    --grot:'Schibsted Grotesk',Helvetica,Arial,sans-serif;
+    --mono:'Azeret Mono',ui-monospace,Menlo,monospace;
   }
   * { box-sizing:border-box; margin:0; }
-  body {
-    background:var(--bg);
-    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
-    background-size:28px 28px;
-    color:var(--ink); font-family:var(--mono); min-height:100vh; padding:20px clamp(12px,3vw,36px) 50px;
-  }
-  header { display:flex; flex-wrap:wrap; align-items:baseline; gap:12px 20px; border-bottom:1.5px solid var(--line); padding-bottom:14px; }
-  header h1 { font-family:var(--sans); font-size:22px; font-weight:800; }
-  header h1 b { color:var(--ok); }
-  .placard { font-size:10px; letter-spacing:2.5px; color:var(--faint); text-transform:uppercase; }
-  header .right { margin-left:auto; font-size:11px; }
-  header a { color:var(--hud); text-decoration:none; }
+  body { background:var(--white); color:var(--black); font-family:var(--grot); min-height:100vh; padding:0 0 70px; font-size:15px; }
 
-  main { display:grid; grid-template-columns:minmax(280px,2fr) minmax(340px,3fr); gap:14px; margin-top:16px; }
-  @media (max-width:900px){ main { grid-template-columns:1fr; } }
-  .panel { background:color-mix(in srgb,var(--panel) 90%,transparent); border:1.5px solid var(--line); border-radius:12px; padding:14px; min-width:0; }
-  .panel h2 { font-size:10px; letter-spacing:2.5px; color:var(--faint); text-transform:uppercase; margin-bottom:10px; display:flex; align-items:center; }
-  .panel h2 .stat { margin-left:auto; letter-spacing:0; color:var(--dim); text-transform:none; }
-  textarea { width:100%; height:190px; resize:vertical; background:var(--bg); color:var(--ink); border:1.5px solid var(--line); border-radius:8px; padding:10px; font:12.5px/1.6 var(--mono); }
-  textarea:focus { outline:none; border-color:var(--hud); }
-  .presets { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
-  .presets button, .ctl button {
-    background:var(--panel2); color:var(--dim); border:1px solid var(--line); border-radius:6px;
-    font:10.5px var(--mono); letter-spacing:1px; padding:5px 9px; cursor:pointer;
-  }
-  .presets button:hover, .ctl button:hover { color:var(--ink); border-color:var(--hud); }
-  .ctl { display:flex; align-items:center; gap:10px; margin-top:12px; font-size:10.5px; color:var(--dim); flex-wrap:wrap; }
-  input[type=range] { width:150px; accent-color:var(--ok); }
+  header { display:flex; flex-wrap:wrap; align-items:baseline; gap:8px 24px; padding:36px clamp(18px,4.5vw,72px) 0; }
+  header h1 { font-size:clamp(34px,5.5vw,58px); font-weight:900; letter-spacing:-.03em; line-height:.95; }
+  header h1 b { color:var(--verm); font-weight:900; }
+  .placard { font-family:var(--mono); font-size:11px; letter-spacing:.1em; color:var(--gray); text-transform:uppercase; }
+  header .right { margin-left:auto; font-size:13px; font-weight:500; }
+  header a { color:var(--black); text-decoration:none; border-bottom:2px solid var(--verm); }
+  header::after { content:''; display:block; width:100%; height:6px; background:var(--black); margin-top:18px; }
 
-  /* the stream */
-  #stream { border:1.5px solid var(--line); border-radius:10px; background:var(--bg); padding:12px; min-height:120px; }
-  #chunks { display:flex; gap:6px; flex-wrap:wrap; }
-  .chunk { border:1.5px solid var(--line); border-radius:8px; padding:6px 9px; font-size:10.5px; color:var(--faint); position:relative; transition:border-color .25s; }
-  .chunk.active { border-color:var(--ok); color:var(--ink); box-shadow:0 0 10px rgba(74,222,128,.25); }
-  .chunk.done { color:var(--dim); }
-  .chunk .carry { position:absolute; right:-11px; top:50%; transform:translateY(-50%); width:16px; height:16px; border-radius:50%; background:var(--amber); color:#0b0f14; font-size:9px; font-weight:700; display:flex; align-items:center; justify-content:center; z-index:1; }
-  #boundaryNote { margin-top:10px; font-size:11px; color:var(--amber); min-height:34px; line-height:1.6; }
-  #boundaryHex { font-size:10.5px; color:var(--dim); }
-  #boundaryHex b { color:var(--amber); font-weight:400; }
+  main { display:grid; grid-template-columns:minmax(280px,2fr) minmax(340px,3fr); gap:0; }
+  @media (max-width:900px){ main { grid-template-columns:1fr; } .panel + .panel { border-left:none !important; border-top:1px solid var(--hairline); } }
+  .panel { min-width:0; padding:26px clamp(18px,3vw,44px); }
+  .panel + .panel { border-left:1px solid var(--hairline); }
+  .panel h2 { font-size:12px; letter-spacing:.14em; color:var(--black); text-transform:uppercase; font-weight:700; margin-bottom:14px; display:flex; align-items:baseline; }
+  .panel h2 .stat { margin-left:auto; font-family:var(--mono); font-weight:400; letter-spacing:0; color:var(--gray); text-transform:none; font-size:11px; }
 
-  #counters { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-top:14px; }
-  .cnt { border:1px solid var(--line); border-radius:10px; padding:10px 12px; background:var(--bg); }
-  .cnt .k { font-size:9.5px; letter-spacing:2px; color:var(--faint); }
-  .cnt .v { font-family:var(--sans); font-size:26px; font-weight:800; }
-  .cnt .flag { font-size:9px; color:var(--faint); }
-  #verdict { margin-top:12px; font-size:11.5px; color:var(--dim); border:1px solid var(--line); border-radius:8px; padding:9px 12px; }
-  #verdict b { color:var(--ok); font-weight:400; }
-  .note { font-size:10.5px; color:var(--faint); margin-top:10px; line-height:1.7; }
-  footer { margin-top:26px; border-top:1px solid var(--line); padding-top:12px; font-size:10.5px; color:var(--faint); letter-spacing:1px; text-align:center; line-height:1.9; }
-  footer a { color:var(--dim); }
+  textarea { width:100%; height:190px; resize:vertical; background:var(--off); color:var(--black); border:none; border-bottom:3px solid var(--black); padding:14px; font:13px/1.7 var(--mono); }
+  textarea:focus { outline:none; border-bottom-color:var(--verm); }
+  .presets { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+  .presets button, .ctl button { background:var(--white); color:var(--black); border:1.5px solid var(--black); border-radius:0; font:700 11px var(--grot); letter-spacing:.08em; padding:7px 13px; cursor:pointer; }
+  .presets button:hover, .ctl button:hover { background:var(--verm); border-color:var(--verm); color:var(--white); }
+  .ctl { display:flex; align-items:center; gap:12px; margin-top:16px; font-size:11px; color:var(--gray); flex-wrap:wrap; font-family:var(--mono); }
+  input[type=range] { width:150px; accent-color:var(--verm); }
+
+  #stream { border-top:1px solid var(--hairline); padding-top:16px; min-height:120px; }
+  #chunks { display:flex; gap:7px; flex-wrap:wrap; }
+  .chunk { border:1.5px solid var(--hairline); padding:6px 10px; font:11px var(--mono); color:var(--gray); position:relative; transition:all .25s; background:var(--white); }
+  .chunk.active { border-color:var(--black); color:var(--black); background:var(--off); }
+  .chunk.done { color:var(--gray); border-color:var(--hairline); background:var(--off); }
+  .chunk .carry { position:absolute; right:-12px; top:50%; transform:translateY(-50%); width:18px; height:18px; border-radius:50%; background:var(--verm); color:var(--white); font:700 9.5px var(--mono); display:flex; align-items:center; justify-content:center; z-index:1; }
+  #boundaryNote { margin-top:12px; font-size:13px; color:var(--verm); min-height:34px; line-height:1.6; font-weight:500; }
+  #boundaryHex { font:11px var(--mono); color:var(--gray); }
+  #boundaryHex b { color:var(--verm); font-weight:700; }
+
+  /* the odometer — counting made physical */
+  #counters { display:grid; grid-template-columns:repeat(4,1fr); gap:0; margin-top:20px; border:3px solid var(--black); }
+  @media (max-width:640px){ #counters { grid-template-columns:repeat(2,1fr); } }
+  .cnt { padding:14px 16px 12px; background:var(--white); }
+  .cnt + .cnt { border-left:1px solid var(--hairline); }
+  @media (max-width:640px){ .cnt:nth-child(3) { border-left:none; } .cnt:nth-child(n+3) { border-top:1px solid var(--hairline); } }
+  .cnt .k { font-size:10px; letter-spacing:.18em; color:var(--gray); font-weight:700; }
+  .cnt .v { font-family:var(--mono); font-size:clamp(26px,3.2vw,40px); font-weight:700; font-variant-numeric:tabular-nums; letter-spacing:.02em; background:var(--wheel); color:var(--wheelface); display:inline-block; padding:2px 10px; margin-top:6px; border-radius:3px; box-shadow:inset 0 4px 7px rgba(0,0,0,.55), inset 0 -4px 7px rgba(0,0,0,.55); }
+  .cnt .flag { font:10px var(--mono); color:var(--gray); margin-top:6px; }
+  #verdict { margin-top:18px; font-size:14px; color:var(--black); border-left:6px solid var(--verm); padding:10px 16px; background:var(--off); line-height:1.7; }
+  #verdict b { color:var(--verm); font-weight:700; }
+  .note { font-size:12.5px; color:var(--gray); margin-top:14px; line-height:1.75; max-width:52ch; }
+  footer { margin:40px clamp(18px,4.5vw,72px) 0; border-top:6px solid var(--black); padding-top:12px; font:11px var(--mono); color:var(--gray); letter-spacing:.06em; line-height:2; }
+  footer a { color:var(--black); border-bottom:2px solid var(--verm); text-decoration:none; }
 </style>
 </head>
 <body>
 
 <header>
-  <h1>WC-GO <b>STREAM DECK</b></h1>
-  <span class="placard">chunked counting, with the byte that straddles the boundary</span>
+  <h1>wc-Go <b>counting room</b></h1>
+  <span class="placard">every character accounted for — including the one cut in half</span>
   <span class="right"><a href="https://github.com/brickster241/wc-Go" target="_blank" rel="noreferrer">source ↗</a></span>
 </header>
 
@@ -83,14 +81,14 @@
     <textarea id="src" spellcheck="false" aria-label="text input"></textarea>
     <div class="presets" id="presets"></div>
     <div class="ctl">
-      <span>CHUNK <b id="vChunk" style="color:var(--ink)">16</b> bytes</span>
+      <span>CHUNK <b id="vChunk" style="color:var(--black)">16</b> bytes</span>
       <input type="range" id="chunk" min="4" max="64" step="4" value="16">
       <button id="runBtn">STREAM IT</button>
       <button id="uploadBtn" title="Count a real file at real 32KB chunks — throughput measured live">⬆ UPLOAD FILE</button>
       <input type="file" id="fileIn" hidden>
     </div>
     <p class="note">The real thing reads 32KB chunks; here they are tiny so you can watch the
-    seams. The interesting moment is a multi-byte character cut by a chunk edge — the amber
+    seams. The interesting moment is a multi-byte character cut by a chunk edge — the red
     carry hands its head bytes to the next chunk, and the counts come out right anyway.
     Verified against coreutils by a 59-case differential suite.</p>
   </section>
@@ -265,7 +263,7 @@ async function bulk(file) {
   $('inStat').textContent = `${file.name} · ${(bytes.length / 1048576).toFixed(2)} MB`
   const nChunks = Math.ceil(bytes.length / BULK_CHUNK)
   $('chunkStat').textContent = `${nChunks} chunks × 32KB (the real size)`
-  $('chunks').innerHTML = `<div style="width:100%"><div style="height:6px;border:1px solid var(--line);border-radius:3px;overflow:hidden"><div id="bulkBar" style="height:100%;width:0%;background:var(--ok);transition:width .1s"></div></div><div id="bulkLine" style="font-size:10.5px;color:var(--dim);margin-top:8px"></div></div>`
+  $('chunks').innerHTML = `<div style="width:100%"><div style="height:6px;border:1px solid var(--hairline);border-radius:3px;overflow:hidden"><div id="bulkBar" style="height:100%;width:0%;background:var(--verm);transition:width .1s"></div></div><div id="bulkLine" style="font-size:11px;color:var(--gray);margin-top:8px;font-family:var(--mono)"></div></div>`
   $('boundaryNote').textContent = ''
   $('boundaryHex').textContent = ''
   $('verdict').textContent = 'counting…'
