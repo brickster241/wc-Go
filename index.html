@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>wc-Go · Stream Deck</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='none' stroke='%234ade80' stroke-width='3'/%3E%3Ccircle cx='16' cy='16' r='5' fill='%234ade80'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg:#0b0f14; --panel:#11151d; --panel2:#161c26; --line:#232b38; --grid:#121826;
+    --ink:#e6edf3; --dim:#8b98a9; --faint:#5b6675;
+    --amber:#ffb454; --hud:#7dd3fc; --ok:#4ade80; --err:#f87171; --purple:#c4b5fd;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace;
+    --sans:-apple-system,'Segoe UI',system-ui,Helvetica,Arial,sans-serif;
+  }
+  * { box-sizing:border-box; margin:0; }
+  body {
+    background:var(--bg);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px;
+    color:var(--ink); font-family:var(--mono); min-height:100vh; padding:20px clamp(12px,3vw,36px) 50px;
+  }
+  header { display:flex; flex-wrap:wrap; align-items:baseline; gap:12px 20px; border-bottom:1.5px solid var(--line); padding-bottom:14px; }
+  header h1 { font-family:var(--sans); font-size:22px; font-weight:800; }
+  header h1 b { color:var(--ok); }
+  .placard { font-size:10px; letter-spacing:2.5px; color:var(--faint); text-transform:uppercase; }
+  header .right { margin-left:auto; font-size:11px; }
+  header a { color:var(--hud); text-decoration:none; }
+
+  main { display:grid; grid-template-columns:minmax(280px,2fr) minmax(340px,3fr); gap:14px; margin-top:16px; }
+  @media (max-width:900px){ main { grid-template-columns:1fr; } }
+  .panel { background:color-mix(in srgb,var(--panel) 90%,transparent); border:1.5px solid var(--line); border-radius:12px; padding:14px; min-width:0; }
+  .panel h2 { font-size:10px; letter-spacing:2.5px; color:var(--faint); text-transform:uppercase; margin-bottom:10px; display:flex; align-items:center; }
+  .panel h2 .stat { margin-left:auto; letter-spacing:0; color:var(--dim); text-transform:none; }
+  textarea { width:100%; height:190px; resize:vertical; background:var(--bg); color:var(--ink); border:1.5px solid var(--line); border-radius:8px; padding:10px; font:12.5px/1.6 var(--mono); }
+  textarea:focus { outline:none; border-color:var(--hud); }
+  .presets { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+  .presets button, .ctl button {
+    background:var(--panel2); color:var(--dim); border:1px solid var(--line); border-radius:6px;
+    font:10.5px var(--mono); letter-spacing:1px; padding:5px 9px; cursor:pointer;
+  }
+  .presets button:hover, .ctl button:hover { color:var(--ink); border-color:var(--hud); }
+  .ctl { display:flex; align-items:center; gap:10px; margin-top:12px; font-size:10.5px; color:var(--dim); flex-wrap:wrap; }
+  input[type=range] { width:150px; accent-color:var(--ok); }
+
+  /* the stream */
+  #stream { border:1.5px solid var(--line); border-radius:10px; background:var(--bg); padding:12px; min-height:120px; }
+  #chunks { display:flex; gap:6px; flex-wrap:wrap; }
+  .chunk { border:1.5px solid var(--line); border-radius:8px; padding:6px 9px; font-size:10.5px; color:var(--faint); position:relative; transition:border-color .25s; }
+  .chunk.active { border-color:var(--ok); color:var(--ink); box-shadow:0 0 10px rgba(74,222,128,.25); }
+  .chunk.done { color:var(--dim); }
+  .chunk .carry { position:absolute; right:-11px; top:50%; transform:translateY(-50%); width:16px; height:16px; border-radius:50%; background:var(--amber); color:#0b0f14; font-size:9px; font-weight:700; display:flex; align-items:center; justify-content:center; z-index:1; }
+  #boundaryNote { margin-top:10px; font-size:11px; color:var(--amber); min-height:34px; line-height:1.6; }
+  #boundaryHex { font-size:10.5px; color:var(--dim); }
+  #boundaryHex b { color:var(--amber); font-weight:400; }
+
+  #counters { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-top:14px; }
+  .cnt { border:1px solid var(--line); border-radius:10px; padding:10px 12px; background:var(--bg); }
+  .cnt .k { font-size:9.5px; letter-spacing:2px; color:var(--faint); }
+  .cnt .v { font-family:var(--sans); font-size:26px; font-weight:800; }
+  .cnt .flag { font-size:9px; color:var(--faint); }
+  #verdict { margin-top:12px; font-size:11.5px; color:var(--dim); border:1px solid var(--line); border-radius:8px; padding:9px 12px; }
+  #verdict b { color:var(--ok); font-weight:400; }
+  .note { font-size:10.5px; color:var(--faint); margin-top:10px; line-height:1.7; }
+  footer { margin-top:26px; border-top:1px solid var(--line); padding-top:12px; font-size:10.5px; color:var(--faint); letter-spacing:1px; text-align:center; line-height:1.9; }
+  footer a { color:var(--dim); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>WC-GO <b>STREAM DECK</b></h1>
+  <span class="placard">chunked counting, with the byte that straddles the boundary</span>
+  <span class="right"><a href="https://github.com/brickster241/wc-Go" target="_blank" rel="noreferrer">source ↗</a></span>
+</header>
+
+<main>
+  <section class="panel">
+    <h2>Input <span class="stat" id="inStat"></span></h2>
+    <textarea id="src" spellcheck="false" aria-label="text input"></textarea>
+    <div class="presets" id="presets"></div>
+    <div class="ctl">
+      <span>CHUNK <b id="vChunk" style="color:var(--ink)">16</b> bytes</span>
+      <input type="range" id="chunk" min="4" max="64" step="4" value="16">
+      <button id="runBtn">STREAM IT</button>
+    </div>
+    <p class="note">The real thing reads 32KB chunks; here they are tiny so you can watch the
+    seams. The interesting moment is a multi-byte character cut by a chunk edge — the amber
+    carry hands its head bytes to the next chunk, and the counts come out right anyway.
+    Verified against coreutils by a 59-case differential suite.</p>
+  </section>
+
+  <section class="panel">
+    <h2>The stream <span class="stat" id="chunkStat"></span></h2>
+    <div id="stream">
+      <div id="chunks"></div>
+      <div id="boundaryNote"></div>
+      <div id="boundaryHex"></div>
+    </div>
+    <div id="counters">
+      <div class="cnt"><div class="k">LINES</div><div class="v" id="cL">0</div><div class="flag">-l</div></div>
+      <div class="cnt"><div class="k">WORDS</div><div class="v" id="cW">0</div><div class="flag">-w</div></div>
+      <div class="cnt"><div class="k">BYTES</div><div class="v" id="cB">0</div><div class="flag">-c</div></div>
+      <div class="cnt"><div class="k">CHARS</div><div class="v" id="cM">0</div><div class="flag">-m</div></div>
+    </div>
+    <div id="verdict">stream something —</div>
+  </section>
+</main>
+
+<footer>
+  THE SAME ALGORITHM <a href="https://github.com/brickster241/wc-Go" target="_blank" rel="noreferrer">WC-GO</a> RUNS AT
+  5.6 GB/S ON LINES · MEASURED BY ITS OWN HARNESS, AGREEMENT WITH COREUTILS PROVEN 59/59
+</footer>
+
+<script type="module">
+const $ = (id) => document.getElementById(id)
+const enc = new TextEncoder()
+
+const PRESETS = {
+  'plain': 'the quick brown fox\njumps over the lazy dog\n',
+  'utf-8 mix': 'naïve café — приве́т मस्ते こんにちは 🚀\nsecond line, plain ascii\n',
+  'emoji storm': '🚀🌍🔥📚🍀 one two three\n🎉🤖 four\n',
+  'boundary trap': 'aaaaaaaaaaaaaaaé straddles the 16-byte seam\n',
+}
+
+// wc-Go's algorithm, faithfully: chunked read, carry for the incomplete tail,
+// ASCII-table word scan, RuneCount policy for chars.
+const asciiSpace = new Set([9, 10, 11, 12, 13, 32])
+function isSpaceCp(cp) { return /\s/u.test(String.fromCodePoint(cp)) }
+
+function splitIncompleteTail(buf) {
+  let tail = buf.length
+  for (let back = 1; back <= 4 && back <= buf.length; back++) {
+    const i = buf.length - back
+    const b = buf[i]
+    if (b < 0x80 || b >= 0xc0) {           // RuneStart
+      const need = b < 0x80 ? 1 : b >= 0xf0 ? 4 : b >= 0xe0 ? 3 : 2
+      if (buf.length - i < need) tail = i  // incomplete → defer
+      break
+    }
+  }
+  return [buf.slice(0, tail), buf.slice(tail)]
+}
+function decodeStats(bytes, state) {
+  // returns per-chunk {lines, words, chars} honoring word state across chunks
+  let lines = 0, words = 0, chars = 0
+  for (let i = 0; i < bytes.length;) {
+    const b = bytes[i]
+    let cp, size
+    if (b < 0x80) { cp = b; size = 1 }
+    else if (b >= 0xf0) { size = 4 } else if (b >= 0xe0) { size = 3 } else if (b >= 0xc0) { size = 2 } else { size = 1; cp = 0xfffd }
+    if (cp === undefined) {
+      // decode multibyte (input here is always valid: it came from TextEncoder)
+      const slice = bytes.slice(i, i + size)
+      cp = new TextDecoder().decode(slice).codePointAt(0) ?? 0xfffd
+    }
+    if (cp === 10) lines++
+    const space = b < 0x80 ? asciiSpace.has(b) : isSpaceCp(cp)
+    if (space) state.inWord = false
+    else { if (!state.inWord) words++; state.inWord = true }
+    chars++
+    i += size
+  }
+  return { lines, words, chars }
+}
+
+let timer = null
+async function stream() {
+  clearTimeout(timer)
+  const text = $('src').value
+  const chunkSize = parseInt($('chunk').value)
+  const bytes = enc.encode(text)
+  $('inStat').textContent = `${text.length} code units → ${bytes.length} bytes`
+
+  // reset UI
+  const chunks = []
+  for (let o = 0; o < bytes.length; o += chunkSize) chunks.push(bytes.slice(o, o + chunkSize))
+  $('chunkStat').textContent = `${chunks.length} chunks × ${chunkSize}B`
+  $('chunks').innerHTML = chunks.map((c, i) => `<div class="chunk" id="ch${i}">#${i}<br>${c.length}B</div>`).join('')
+  for (const id of ['cL', 'cW', 'cB', 'cM']) $(id).textContent = '0'
+  $('boundaryNote').textContent = ''
+  $('boundaryHex').textContent = ''
+  $('verdict').textContent = 'streaming…'
+
+  const totals = { l: 0, w: 0, b: 0, m: 0 }
+  const state = { inWord: false }
+  let carry = new Uint8Array(0)
+  let i = 0
+  const stepFn = () => {
+    if (i > 0) { $('ch' + (i - 1)).classList.remove('active'); $('ch' + (i - 1)).classList.add('done') }
+    if (i >= chunks.length) {
+      // EOF: an unfinished rune would be dropped — with TextEncoder input there never is one
+      const own = wcReference(text)
+      const ours = `${totals.l} ${totals.w} ${totals.b} ${totals.m}`
+      const agree = ours === own
+      $('verdict').innerHTML = agree
+        ? `reference agreement: <b>l=${totals.l} w=${totals.w} c=${totals.b} m=${totals.m}</b> — chunked result ≡ whole-string result, boundaries and all`
+        : `mismatch vs reference (${own}) — that would be a bug`
+      return
+    }
+    const chunk = chunks[i]
+    const el = $('ch' + i)
+    el.classList.add('active')
+    totals.b += chunk.length
+
+    const joined = new Uint8Array(carry.length + chunk.length)
+    joined.set(carry, 0); joined.set(chunk, carry.length)
+    const [valid, rest] = splitIncompleteTail(joined)
+    const carried = rest.length
+    carry = rest
+    const st = decodeStats(valid, state)
+    totals.l += st.lines; totals.w += st.words; totals.m += st.chars
+    $('cL').textContent = totals.l; $('cW').textContent = totals.w
+    $('cB').textContent = totals.b; $('cM').textContent = totals.m
+
+    if (carried) {
+      el.insertAdjacentHTML('beforeend', `<span class="carry">${carried}</span>`)
+      const hex = [...rest].map((b) => b.toString(16).padStart(2, '0')).join(' ')
+      $('boundaryNote').textContent = `chunk #${i} ends mid-character — ${carried} byte${carried > 1 ? 's' : ''} carried to chunk #${i + 1}`
+      $('boundaryHex').innerHTML = `carry: <b>${hex}</b> — the head of a rune whose tail is still unread`
+    }
+    i++
+    timer = setTimeout(stepFn, Math.max(240, 900 - chunks.length * 12))
+  }
+  stepFn()
+}
+
+/** whole-string reference: same semantics, no chunking — the differential partner */
+function wcReference(text) {
+  const bytes = enc.encode(text)
+  let l = 0, w = 0, m = 0, inWord = false
+  for (const ch of text) {
+    const cp = ch.codePointAt(0)
+    if (cp === 10) l++
+    const space = /\s/u.test(ch)
+    if (space) inWord = false
+    else { if (!inWord) w++; inWord = true }
+    m++
+  }
+  return `${l} ${w} ${bytes.length} ${m}`
+}
+
+for (const name of Object.keys(PRESETS)) {
+  const b = document.createElement('button')
+  b.textContent = name.toUpperCase()
+  b.onclick = () => { $('src').value = PRESETS[name]; stream() }
+  $('presets').appendChild(b)
+}
+$('chunk').addEventListener('input', () => { $('vChunk').textContent = $('chunk').value })
+$('runBtn').onclick = stream
+$('src').addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(stream, 500) })
+
+$('src').value = PRESETS['boundary trap']
+
+// auto-demo until first touch
+let di = 0, demoOn = true
+const names = Object.keys(PRESETS)
+stream()
+const demoTimer = setInterval(() => {
+  if (!demoOn) return
+  di = (di + 1) % names.length
+  $('src').value = PRESETS[names[di]]
+  stream()
+}, 7000)
+for (const ev of ['pointerdown', 'keydown']) {
+  window.addEventListener(ev, () => { demoOn = false; clearInterval(demoTimer) }, { once: true, capture: true })
+}
+</script>
+</body>
+</html>
