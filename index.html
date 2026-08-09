@@ -5,13 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>wc-Go · Stream Deck</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='none' stroke='%234ade80' stroke-width='3'/%3E%3Ccircle cx='16' cy='16' r='5' fill='%234ade80'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg:#0b0f14; --panel:#11151d; --panel2:#161c26; --line:#232b38; --grid:#121826;
     --ink:#e6edf3; --dim:#8b98a9; --faint:#5b6675;
     --amber:#ffb454; --hud:#7dd3fc; --ok:#4ade80; --err:#f87171; --purple:#c4b5fd;
-    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace;
-    --sans:-apple-system,'Segoe UI',system-ui,Helvetica,Arial,sans-serif;
+    --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:'Chakra Petch',-apple-system,'Segoe UI',system-ui,Helvetica,sans-serif;
   }
   * { box-sizing:border-box; margin:0; }
   body {
@@ -83,6 +86,8 @@
       <span>CHUNK <b id="vChunk" style="color:var(--ink)">16</b> bytes</span>
       <input type="range" id="chunk" min="4" max="64" step="4" value="16">
       <button id="runBtn">STREAM IT</button>
+      <button id="uploadBtn" title="Count a real file at real 32KB chunks — throughput measured live">⬆ UPLOAD FILE</button>
+      <input type="file" id="fileIn" hidden>
     </div>
     <p class="note">The real thing reads 32KB chunks; here they are tiny so you can watch the
     seams. The interesting moment is a multi-byte character cut by a chunk edge — the amber
@@ -249,6 +254,73 @@ for (const name of Object.keys(PRESETS)) {
 $('chunk').addEventListener('input', () => { $('vChunk').textContent = $('chunk').value })
 $('runBtn').onclick = stream
 $('src').addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(stream, 500) })
+
+// ---- file upload: real 32KB chunks, throughput measured in your tab ----
+const BULK_CHUNK = 32 * 1024
+const MAX_UPLOAD = 64 * 1024 * 1024
+async function bulk(file) {
+  clearTimeout(timer)
+  const t0 = performance.now()
+  const bytes = new Uint8Array(await file.arrayBuffer())
+  $('inStat').textContent = `${file.name} · ${(bytes.length / 1048576).toFixed(2)} MB`
+  const nChunks = Math.ceil(bytes.length / BULK_CHUNK)
+  $('chunkStat').textContent = `${nChunks} chunks × 32KB (the real size)`
+  $('chunks').innerHTML = `<div style="width:100%"><div style="height:6px;border:1px solid var(--line);border-radius:3px;overflow:hidden"><div id="bulkBar" style="height:100%;width:0%;background:var(--ok);transition:width .1s"></div></div><div id="bulkLine" style="font-size:10.5px;color:var(--dim);margin-top:8px"></div></div>`
+  $('boundaryNote').textContent = ''
+  $('boundaryHex').textContent = ''
+  $('verdict').textContent = 'counting…'
+
+  // TextDecoder in stream mode carries the incomplete tail across chunks —
+  // the same job wc-Go's carry does, with U+FFFD per invalid byte (same
+  // policy the Go code matched against coreutils).
+  const dec = new TextDecoder('utf-8')
+  let l = 0, w = 0, m = 0, inWord = false, carries = 0
+  let carryProbe = new Uint8Array(0)
+  for (let c = 0; c < nChunks; c++) {
+    const chunk = bytes.subarray(c * BULK_CHUNK, (c + 1) * BULK_CHUNK)
+    // carry accounting, identical to the visual mode's tail-split
+    const joined = new Uint8Array(carryProbe.length + chunk.length)
+    joined.set(carryProbe, 0); joined.set(chunk, carryProbe.length)
+    const [, rest] = splitIncompleteTail(joined)
+    if (rest.length) carries++
+    carryProbe = rest
+
+    const s = dec.decode(chunk, { stream: true })
+    for (const ch of s) {
+      const cp = ch.codePointAt(0)
+      if (cp === 10) l++
+      const space = cp < 128 ? asciiSpace.has(cp) : isSpaceCp(cp)
+      if (space) inWord = false
+      else { if (!inWord) w++; inWord = true }
+      m++
+    }
+    if (c % 64 === 0 || c === nChunks - 1) {
+      $('bulkBar').style.width = (100 * (c + 1) / nChunks).toFixed(1) + '%'
+      $('bulkLine').textContent = `chunk ${c + 1}/${nChunks} · ${carries} boundary ${carries === 1 ? 'carry' : 'carries'} so far`
+      $('cL').textContent = l; $('cW').textContent = w
+      $('cB').textContent = c * BULK_CHUNK + chunk.length; $('cM').textContent = m
+      await new Promise((r) => requestAnimationFrame(r))
+    }
+  }
+  dec.decode() // flush; an unfinished trailing rune is dropped, like the Go code at EOF
+  const ms = performance.now() - t0
+  const rate = (bytes.length / 1048576) / (ms / 1000)
+  $('cL').textContent = l; $('cW').textContent = w
+  $('cB').textContent = bytes.length; $('cM').textContent = m
+  $('verdict').innerHTML = `<b>${l} ${w} ${bytes.length} ${m}</b> — ${(ms).toFixed(0)}ms, ` +
+    `<b>${rate.toFixed(0)} MB/s in this tab</b> (JS, one thread — the Go binary's measured numbers live in the repo), ` +
+    `${carries} chunk-boundary ${carries === 1 ? 'carry' : 'carries'} handled`
+}
+function loadFile(file) {
+  if (!file) return
+  if (file.size > MAX_UPLOAD) { $('verdict').textContent = `${file.name} is over the 64MB cap`; return }
+  if (file.size <= 4096) { file.text().then((t) => { $('src').value = t; stream() }) }
+  else bulk(file)
+}
+$('uploadBtn').onclick = () => $('fileIn').click()
+$('fileIn').addEventListener('change', () => loadFile($('fileIn').files[0]))
+for (const ev of ['dragover', 'drop']) document.addEventListener(ev, (e) => e.preventDefault())
+document.addEventListener('drop', (e) => loadFile(e.dataTransfer?.files?.[0]))
 
 $('src').value = PRESETS['boundary trap']
 
